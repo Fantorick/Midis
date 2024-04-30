@@ -1,0 +1,228 @@
+﻿@inject ContentService contentService
+<h3>Создание расписания</h3>
+<div style="display:flex; align-items:end; gap:5px">
+    <div>
+        <P>Группа</P>
+        <InputSelect @bind-Value="selectedGroupStr" @bind-Value:after="LoadingData">
+            <option>Не выбрано</option>
+            @foreach (var item in contentService.GetRepositoryGroup().ReadList())
+            {
+                <option value="@item.Name">@item.Name</option>
+            }
+        </InputSelect>
+    </div>
+    <div>
+        <p>Четность недели</p>
+        <InputSelect @bind-Value="parityStr" @bind-Value:after="SelectedParity">
+            <option value="Четная">Четная</option>
+            <option value="Нечетная">Не четная</option>
+        </InputSelect>
+    </div>
+ </div>
+ <form>
+    <input type="submit" @onclick="() => SaveSchedules()" value="Сохранить" class="btn">
+
+        <div class="day-week">
+        @for (int i = 0; i < listSchedules.Count()-1; i++)
+            {
+                <div class="day-week-item">
+                    <h5>@parityStr / @dayOfTheWeek[i] / @selectedGroupStr</h5>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Пара</th>
+                                <th>Предмет</th>
+                                <th>Кабинет</th>
+                                <th>Преподаватель</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var schedules in listSchedules[i])
+                            {
+                                <tr>
+                                    <td>
+                                        <input style="width:50px" type="text" @bind-value="schedules.PairNumber">
+                                    </td>
+                                    <td>
+                                        <InputSelect @bind-Value="schedules.Item.Id">
+                                            <option></option>
+                                            @foreach (var item in contentService.GetRepositoryItem().ReadList())
+                                            {
+                                                <option value="@item.Id">@item.Name</option>
+                                            }
+                                        </InputSelect>
+                                    </td>
+                                    <td>
+                                        <input @bind-value="schedules.Cabinet" style="width:50px" type="text" />
+                                    </td>
+                                    <td>
+                                        <InputSelect @bind-Value="schedules.Teacher.Id">
+                                            <option></option>
+                                            @foreach (var item in shortNameTeacher)
+                                            {
+                                                <option value="@item.Id">@item.FullName</option>
+                                            }
+                                        </InputSelect>
+                                    </td>
+                                </tr>
+
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+</form>
+
+@code {
+    public string selectedGroupStr;
+    protected List<IEnumerable<Schedule>> listSchedules;
+    protected bool selectedGroupBool, parityBool;
+    protected string parityStr;
+    protected string[] dayOfTheWeek = new string[]
+    {
+        "Понедельник",
+        "Вторник",
+        "Среда",
+        "Четверг",
+        "Пятница",
+        "Суббота",
+    };
+    protected List<UserMidis> shortNameTeacher;
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        listSchedules = new List<IEnumerable<Schedule>>();
+        parityStr = "Четная";
+        
+        ShortFullNamaAllTeacher();
+        SelectedParity();
+
+    }
+
+    protected void SaveSchedules()
+    {
+        foreach (var item in listSchedules)
+        {
+            foreach (var s in item)
+            {
+                if (s.Item.Id == null || s.Cabinet == null || s.Teacher.Id == null)
+                    continue;
+                s.Group = contentService.GetRepositoryGroup().ReadList().Where(i => i.Name == s.Group.Name).First();
+                s.Item = contentService.GetRepositoryItem().ReadList().Where(i => i.Id == s.Item.Id).First();
+                s.Teacher = contentService.GetRepositoryTeacher().ReadList().Where(i => i.Id == s.Teacher.Id).First();
+                var ls = contentService.GetRepositorySchedule().ReadList().Where(i =>
+                    i.PairNumber == s.PairNumber && i.DayOfTheWeek == s.DayOfTheWeek && i.ParityOfTheWeek == s.ParityOfTheWeek 
+                    && i.Group.Name == s.Group.Name).FirstOrDefault();
+                if (ls == null)
+                {                    
+                    contentService.GetRepositorySchedule().Create(s);
+                }
+                else
+                {
+                    s.Id = ls.Id;
+                    contentService.GetRepositorySchedule().Update(s);
+                }
+            }
+            StateHasChanged();
+        }
+    }
+
+    protected void LoadingData()
+    {
+        if (selectedGroupStr != null && selectedGroupStr != "Не выбрано")
+        {
+
+            selectedGroupBool = true;
+            CreateTable();
+        }
+        else
+        {
+            selectedGroupBool = false;
+        }
+        StateHasChanged();
+    }
+
+    protected void SelectedParity()
+    {
+        if (parityStr == "Четная")
+        {
+            parityBool = false;
+        }
+        else if (parityStr == "Нечетная")
+        {
+            parityBool = true;
+        }
+        CreateTable();
+        StateHasChanged();
+    }
+
+    protected void ShortFullNamaAllTeacher()
+    {
+        shortNameTeacher = new List<UserMidis>();
+
+        foreach (var item in contentService.GetRepositoryTeacher().ReadList())
+        {
+            char[] s = item.FullName.ToCharArray();
+            var sName = "";
+            bool CheackingSpace = false;
+            for (int i = 0; i < s.Length; i++)
+            {
+                if (char.IsWhiteSpace(s[i]))
+                {
+                    sName += " " + s[i + 1] + ".";
+                    CheackingSpace = true;
+                }
+                if (!CheackingSpace)
+                {
+                    sName += s[i];
+                }
+            }
+            shortNameTeacher.Add(new UserMidis()
+            {
+                Id =item.Id,
+                FullName = sName
+            });
+        }
+    }
+
+    protected void CreateTable()
+    {
+        listSchedules = new List<IEnumerable<Schedule>>();
+        for (int i = 0; i < dayOfTheWeek.Length + 1; i++)
+        {
+            var s = new List<Schedule>();
+            for (int j = 1; j <= 8; j++)
+            {
+                s.Add(new Schedule()
+                    {
+                        PairNumber = j,
+                        ParityOfTheWeek = parityBool,
+                        Item = new Item(),
+                        Teacher = new UserMidis(),
+                        Group = new NumberGroup()
+                        {
+                            Name = selectedGroupStr
+                        },
+                        DayOfTheWeek = i
+                    });
+                if (selectedGroupBool == true)
+                {
+                    var bd = contentService.GetRepositorySchedule().ReadList().Where(b =>
+                        b.PairNumber == s.Last().PairNumber &&
+                        b.Group.Name == s.Last().Group.Name &&
+                        b.ParityOfTheWeek == s.Last().ParityOfTheWeek &&
+                        b.DayOfTheWeek == i).FirstOrDefault();
+                if (bd != null && bd.Teacher != null)
+                {
+                    s.Remove(s.Last());
+                    s.Add(bd);
+                }
+                }
+
+            }
+            listSchedules.Add(s);
+        }
+    }
+}

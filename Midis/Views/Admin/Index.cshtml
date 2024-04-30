@@ -1,0 +1,20 @@
+﻿@using Midis.Blazor
+
+@{
+    ViewData["Title"] = "Админ";
+}
+
+<h2>Панель Администратора</h2>
+
+<div>
+    <a asp-action="ListItemsAndGroup" asp-controller="Admin">Группы и предметы</a>
+</div>
+<div>
+    <a asp-action="CreateUsers" asp-controller="Admin">Создание пользователей</a>
+</div>
+<div>
+    <a asp-action="CreateSchedules" asp-controller="Admin">Создание расписания</a>
+</div>
+<div>
+    <a asp-action="ListUsersByGroups" asp-controller="Admin">Студенты</a>
+</div>

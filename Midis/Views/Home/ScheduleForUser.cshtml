@@ -1,0 +1,98 @@
+﻿@model IEnumerable<Midis.Domains.Schedule>
+
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    var firstTable = Model.Where(s => s.ParityOfTheWeek == false);
+    var lastTable = Model.Where(s => s.ParityOfTheWeek == true);
+
+    string[] dw = new string[]
+    {
+        "Понедельник",
+        "Вторник",
+        "Среда",
+        "Четверг",
+        "Пятница",
+        "Суббота",
+    };
+}
+
+<h3>Четная неделя</h3>
+<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 5px;">
+    @for (int i = 0; i < dw.Count(); i++)
+    {
+        <div class="day-week-item">
+            <h5>@dw[i]</h5>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Пара</th>
+                        <th>Предмет</th>
+                        <th>Кабинет</th>
+                        <th>Преподаватель</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var schedules in firstTable.Where(s => s.DayOfTheWeek == i).OrderBy(s => s.PairNumber))
+                    {
+                        <tr>
+                            <td>
+                                <p>@schedules.PairNumber</p>
+                            </td>
+                            <td>
+                                <p>@schedules.Item.Name</p>
+                            </td>
+                            <td>
+                                <p>@schedules.Cabinet</p>
+                            </td>
+                            <td>
+                                <p>@schedules.Teacher.FullName</p>
+                            </td>
+                        </tr>
+
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+<h3>Нечетная неделя</h3>
+<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 5px;">
+    @for (int i = 0; i < dw.Count(); i++)
+    {
+        <div class="day-week-item">
+            <h5>@dw[i]</h5>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Пара</th>
+                        <th>Предмет</th>
+                        <th>Кабинет</th>
+                        <th>Преподаватель</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var schedules in lastTable.Where(s => s.DayOfTheWeek == i).OrderBy(s => s.PairNumber))
+                    {
+                        <tr>
+                            <td>
+                                <p>@schedules.PairNumber</p>
+                            </td>
+                            <td>
+                                <p>@schedules.Item.Name</p>
+                            </td>
+                            <td>
+                                <p>@schedules.Cabinet</p>
+                            </td>
+                            <td>
+                                <p>@schedules.Teacher.FullName</p>
+                            </td>
+                        </tr>
+
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

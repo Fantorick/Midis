@@ -1,0 +1,9 @@
+﻿@using Midis.Blazor
+
+@{
+    ViewData["Title"] = "Создание пользователей";
+}
+
+<h1>Создание пользователей</h1>
+
+@(await Html.RenderComponentAsync<CreateUsersComponent>(RenderMode.ServerPrerendered))

@@ -1,0 +1,270 @@
+﻿@using System.Text
+@using ClosedXML.Excel
+
+@inject UserContentService userContentService
+
+<form id="registerForm" method="post">
+<div class="col-md-4 user-header" style="display:flex">
+    <div>
+    <P>Выберите роль пользователей</P>
+    <InputSelect @bind-Value="SelectedRole">
+                <option>Не выбрано</option>
+        @foreach (var item in usersModel.Role)
+        {
+            <option value="@item">@item</option>
+        }
+    </InputSelect>
+    </div>
+    
+    @if (SelectedRole == "Студент")
+    {
+        <div>
+        <P>Выберите группу студента</P>
+        <InputSelect @bind-Value="SelectedGroup">
+                    <option>Не выбрано</option>
+            @foreach (var item in usersModel.Group)
+            {
+                <option value="@item">@item</option>
+            }
+        </InputSelect>
+        </div>
+    }
+    <div>
+        <p>Введите кол-во пользователей</p>
+        <input @bind-value="usersModel.Count" @bind-value:after="СhangeRowUsers" type="number" min="0" />
+    </div>
+        <input type="button" value="Сохранить" class="btn btn-primary" @onclick="AddUsersInDB" />
+</div>
+<div>
+    <table class="table">
+
+        <thead>
+            <tr>
+                <th>ФИО</th>
+                <th>Email</th>
+                <th>Пароль</th>
+                <th>Роль</th>
+                <th>Группа</th>
+                <th>Ошибки</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (usersModel.Count > 0)
+            {   
+                @foreach (var item in ums)
+                {
+                    <tr>
+                        <td>
+                            <input required @bind-value="item.FullName" placeholder="ФИО" type="text" />
+                            <span asp-validation-for="@item.FullName" class="text-danger"></span>
+                        </td>
+                        <td>
+                                <input required @bind-value="item.Email" placeholder="Email" type="email" />
+                            <span asp-validation-for="@item.Email" class="text-danger"></span>
+                        </td>
+                        <td>
+                                <input oninvalid="@item.Password" required @bind-value="item.Password" placeholder="Пароль" type="text" />
+                            <span class="text-danger"></span>
+                        </td>
+                        <td>
+                            <InputSelect @bind-Value="item.Role">
+                                    <option>Не выбрано</option>
+                                @foreach (var item in usersModel.Role)
+                                {
+                                    <option value="@item">@item</option>
+                                }
+                            </InputSelect>
+                        </td>
+                            <td>
+                                @if (item.Role == "Студент")
+                                {
+
+                                    <InputSelect @bind-Value="item.Group">
+                                        <option>Не выбрано</option>
+                                        @foreach (var item in usersModel.Group)
+                                        {
+                                            <option value="@item">@item</option>
+                                        }
+                                    </InputSelect>
+
+                                }
+                            </td>
+                        <td>
+                            
+                            @foreach (var er in item.Errors)
+                                {
+                                    <p>@er</p>
+                                }
+                        </td>
+                    </tr>
+
+                }
+            }
+        </tbody>
+
+    </table>
+</div>
+</form>
+
+@code {
+    public UsersModel usersModel;
+    public string SelectedRole, SelectedGroup;
+    public int lastCount;
+    public List<UserModel> ums;
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        usersModel = new UsersModel();
+        usersModel.Group = new List<string>();
+        foreach (var item in userContentService.GetRepositoryGroup().ReadList())
+        {
+            usersModel.Group.Add(item.Name);
+        }
+        usersModel.Role = new List<string>();
+        foreach (var item in userContentService.GetRepositoryRole().Roles)
+        {
+            usersModel.Role.Add(item.Name);
+        }
+        ums = new List<UserModel>();
+        lastCount = usersModel.Count;
+    }
+
+    public string RandomPassword()
+    {
+        Random rnd = new Random();
+        StringBuilder str = new StringBuilder(8);
+        List<int> Symbols = new List<int> { 35, 36, 37, 38, 42, 64 };
+
+        str.Append((
+            (char)rnd.Next(48, 57)).ToString() +
+            (char)rnd.Next(65, 90) +
+            (char)rnd.Next(97, 122) +
+            (char)Symbols[rnd.Next(0, 6)] +
+            (char)rnd.Next(65, 90) +
+            (char)rnd.Next(97, 122) +
+            (char)Symbols[rnd.Next(0, 6)]);
+        return str.ToString();
+    }
+
+
+    public void СhangeRowUsers()
+    {
+        if (lastCount < usersModel.Count)
+        {
+            for (int i = 0; i < usersModel.Count- lastCount; i++)
+            {
+                var um = new UserModel();
+                um.Id = ums.Count;
+                um.Role = SelectedRole;
+                um.Group = SelectedGroup;
+                um.Password = RandomPassword();
+                um.Errors = new List<string>();
+                ums.Add(um);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < lastCount - usersModel.Count; i++)
+            {
+                ums.Remove(ums.Last());
+            }
+        }
+        lastCount = usersModel.Count;
+    }
+
+    public async Task AddUsersInDB()
+    {
+        IdentityResult result = new IdentityResult();
+        foreach (var item in ums)
+        {                        
+            UserMidis user = new UserMidis { Email = item.Email, UserName = item.Email, FullName = item.FullName,  };
+
+            try
+            {
+                if (item.Role == "Студент" && item.Group == null)
+                {
+                    item.Errors.Clear();
+                    item.Errors.Add("* Выберите группу");
+                    break;
+                }
+                result = await userContentService.GetRepositoryUser().CreateAsync(user, item.Password);
+                await userContentService.GetRepositoryUser().AddToRoleAsync(user, item.Role);
+                var userGroup = new UserGroup();
+                userGroup.User = user;
+                if (item.Role == "Студент")
+                {
+                    userGroup.Group = userContentService.GetRepositoryGroup().ReadList().Where(n => n.Name == item.Group).First();
+                    userContentService.GetRepositoryUserGroup().Create(userGroup);
+                }                
+            }
+            catch
+            {
+                
+            }
+
+            item.Errors.Clear();
+            foreach (var error in result.Errors)
+            {
+                item.Errors.Add(error.Description);
+            }        
+        }
+        var e = ums.Where(c => c.Errors.Count() == 0).Count();
+        for (int i = 0; i < e; i++)
+        {
+            UpdateExelFile(ums.Where(c => c.Errors.Count == 0).First());
+            ums.Remove(ums.Where(c => c.Errors.Count == 0).First());
+        }
+        lastCount = ums.Count;
+        usersModel.Count = ums.Count;
+        StateHasChanged();
+
+
+    }
+
+    public void UpdateExelFile(UserModel u)
+    {
+        var path = Path.Combine(Environment.CurrentDirectory, "ExelTable", "Users.xlsx");
+        if (!File.Exists(path))
+        {
+            CreateExelFile(path);
+        }
+        var wb = new XLWorkbook(path);
+
+        var sh = wb.Worksheet("Users");
+
+        sh.Cell(sh.LastRowUsed().RowNumber() + 1, 1).SetValue(u.FullName);
+        sh.Cell(sh.LastRowUsed().RowNumber(), 2).SetValue(u.Email);
+        sh.Cell(sh.LastRowUsed().RowNumber(), 3).SetValue(u.Password);
+        sh.Cell(sh.LastRowUsed().RowNumber(), 4).SetValue(u.Role);
+        if (u.Role == "Студент")
+            sh.Cell(sh.LastRowUsed().RowNumber(), 5).SetValue(u.Group);
+
+        wb.SaveAs(path);
+
+    }
+    public void CreateExelFile(string path)
+    {
+        var wb = new XLWorkbook();
+        var sh = wb.Worksheets.Add("Users");
+
+        sh.Cell(1, 1).SetValue("ФИО").Style.Font.Bold = true;
+        sh.Cell(1, 2).SetValue("Email").Style.Font.Bold = true;
+        sh.Cell(1, 3).SetValue("Пароль").Style.Font.Bold = true;
+        sh.Cell(1, 4).SetValue("Роль").Style.Font.Bold = true;
+        sh.Cell(1, 5).SetValue("Группа").Style.Font.Bold = true;
+        wb.SaveAs(path);
+    }
+}
+<script>
+    document.getElementById('registerForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+    });
+    $(document).ready(function () {
+        $("registerForm").keydown(function (event) {
+            if (event.keyCode == 13) {
+                event.preventDefault();
+                return false;
+            }
+        });
+    });
+</script>

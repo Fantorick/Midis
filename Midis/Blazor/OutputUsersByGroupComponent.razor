@@ -1,0 +1,60 @@
+﻿@inject UserContentService content
+
+<h3>OutputUsersByGroupComponent</h3>
+
+<InputSelect @bind-Value="SelectedGroup" @bind-Value:after="OutputStudent">
+    <option>Не выбрано</option>
+    <option>Учителя</option>
+    @foreach (var item in content.GetRepositoryGroup().ReadList().OrderBy(i => i.Name))
+    {
+        <option>@item.Name</option>
+    }
+</InputSelect>
+@if (users?.Count() > 0)
+{    
+    <table class="table">
+
+        <thead>
+            <tr>
+                <th>ФИО</th>
+                <th>Email</th> 
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in users)
+            {
+                <tr>
+                    <td>@item.FullName</td>
+                    <td>@item.Email</td>
+                </tr>
+            }              
+        </tbody>
+
+    </table>
+
+}
+@code {
+    protected string SelectedGroup;
+    protected IEnumerable<UserMidis> users;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+    }
+    protected void OutputStudent()
+    {
+        if (SelectedGroup == "Учителя")
+            users = content.GetRepositoryTeacher().ReadList();
+        else if (SelectedGroup != "Не выбрано" && SelectedGroup != null)
+        {
+            users = new List<UserMidis>();
+            var u = content.GetRepositoryUserGroup().ReadList().Where(us => us.Group.Name == SelectedGroup);
+            foreach (var item in u)
+            {
+                users = users.Append(item.User);
+            }
+        }
+    }
+    
+}

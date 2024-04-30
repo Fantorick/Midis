@@ -1,0 +1,8 @@
+﻿@using Midis.Blazor
+
+@{
+    ViewData["Title"] = "Создание расписания";
+}
+
+@(await Html.RenderComponentAsync<CreateSchedulesComponent>(RenderMode.ServerPrerendered))
+

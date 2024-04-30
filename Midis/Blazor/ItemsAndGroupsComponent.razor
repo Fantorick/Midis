@@ -1,0 +1,149 @@
+﻿@inject ContentService contentService
+
+<div class="row" style="align-items: start">
+    <div class="col-md-4" style="width:420px">
+        <form asp-action="CreateItem1">
+            <h4>Добавление учебного предмета</h4>
+            <div class="form-group">
+                <label asp-for="@ItemName" class="control-label">Название</label>
+                <input @bind-value="ItemName" class="form-control" />
+                <span asp-validation-for="@ItemName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input @onclick="CreateItem" type="submit" value="Добавить" class="btn btn-primary" />
+            </div>
+        </form>
+        <form asp-action="CreateGroup1" style="margin-top: 50px">
+            <h4>Добавление учебной группы</h4>
+            <div class="form-group">
+                <label asp-for="group.Name" class="control-label">Название</label>
+                <input @bind-value="GroupName" class="form-control" />
+                <span asp-validation-for="group.Name" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input @onclick="CreateGroup" type="submit" value="Добавить" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+    <table class="table" style="width:400px">
+        <thead>
+            <tr>
+                <th>Предметы</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var i in itemsAndGroups.items)
+            {
+                <tr>
+                    <td>
+                        @if (idItem.Where(it => it == i.Id).FirstOrDefault() == i.Id)
+                        {
+
+                            <input style="margin:0; width:200px" @bind-value="@i.Name" />
+                        }
+                        else
+                        {
+                            <p style="margin:0; width:200px">@i.Name</p>
+                        }  
+                    </td>
+                    <td style="display:flex; gap: 5px">
+
+                        @if (idItem.Where(it => it == i.Id).FirstOrDefault() == i.Id)
+                        {
+                            <button style="width:125px" @onclick="() => UpdateItem(i.Id)" class=" ">Сохранить</button>
+                        }
+                        else
+                        {
+                            <button style="width:125px" @onclick="() => idItem.Add(i.Id)">Редактировать</button>
+
+                        }
+                        |<button class="" @onclick="() => contentService.GetRepositoryItem().Delete(i.Id)">Удалить</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <table class="table" style="width:400px">
+        <thead>
+            <tr>
+                <th>Группы</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var g in itemsAndGroups.groups)
+            {
+                <tr>
+                    <td width="206px">
+
+                        @if (idGroup.Where(gr => gr == g.Id).FirstOrDefault() == g.Id)
+                        {
+                            <input style="margin:0; width:200px" @bind-value="@g.Name" />
+                        }
+                        else
+                        {
+                            <p style="margin:0; width:200px">@g.Name</p>
+                        }
+                    </td>
+                    <td style="display:flex; gap: 5px">
+                        @if (idGroup.Where(gr => gr == g.Id).FirstOrDefault() == g.Id)
+                        {
+                            <button style="width:125px" @onclick="() => UpdateGroup(g.Id)" class=" ">Сохранить</button>
+                        }
+                        else
+                        {
+                            <button style="width:125px" @onclick="() => idGroup.Add(g.Id)">Редактировать</button>
+                        }
+
+
+                        |<button class="" @onclick="() => contentService.GetRepositoryGroup().Delete(g.Id)">Удалить</button>
+                        
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    public string ItemName, GroupName;
+    public ItemAndGroupModel itemsAndGroups;
+    public List<long> idItem, idGroup;
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        idItem = new List<long>();
+        idGroup = new List<long>();
+        itemsAndGroups = new ItemAndGroupModel(contentService.GetRepositoryItem().ReadList(), contentService.GetRepositoryGroup().ReadList());
+    }
+    public void CreateItem()
+    {
+        var count = contentService.GetRepositoryItem().ReadList().Where(item => item.Name.ToUpper() == ItemName.ToUpper()).Count();
+        if (count == 0)
+            contentService.GetRepositoryItem().Create(new Item() { Name = ItemName });
+    }
+
+    public void CreateGroup()
+    {
+        var count = contentService.GetRepositoryGroup().ReadList().Where(group => group.Name.ToUpper() == GroupName.ToUpper()).Count();
+        if (count == 0)
+            contentService.GetRepositoryGroup().Create(new NumberGroup() { Name = GroupName.ToUpper() });
+    }
+
+    public void UpdateItem(long id)
+    {
+        contentService.GetRepositoryItem().Update(
+            contentService.GetRepositoryItem().ReadList().Where(i => i.Id == idItem.Where(it => it == i.Id).FirstOrDefault()).First());
+        idItem.Remove(id);
+        StateHasChanged();
+    }
+
+    public void UpdateGroup(long id)
+    {
+        contentService.GetRepositoryGroup().Update(
+            contentService.GetRepositoryGroup().ReadList().Where(g => g.Id == idGroup.Where(gr => gr == g.Id).FirstOrDefault()).First());      
+        idGroup.Remove(id);       
+        StateHasChanged();
+    }
+}
+

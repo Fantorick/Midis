@@ -1,0 +1,15 @@
+﻿@using Midis.Blazor
+@using Midis.Domains
+@model Midis.Models.ItemAndGroupModel
+
+@{
+    ViewData["Title"] = "Предметы и группы";
+}
+<h2 style="text-align:center; margin-top:10px; margin-bottom:30px">Предметы и группы</h2>
+@(await Html.RenderComponentAsync<ItemsAndGroupsComponent>(RenderMode.ServerPrerendered))
+
+<div>
+    <a asp-action="Index">Назад</a>
+</div>
+
+
